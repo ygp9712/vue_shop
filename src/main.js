@@ -9,6 +9,14 @@ import './assets/css/global.styl'
 
 import axios from 'axios'
 axios.defaults.baseURL = 'http://localhost:8888/api/private/v1/'
+axios.interceptors.request.use(config => {
+  const token = window.sessionStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = token
+  }
+  // 在最后必须return config
+  return config
+})
 Vue.prototype.$http = axios
 
 Vue.config.productionTip = false
