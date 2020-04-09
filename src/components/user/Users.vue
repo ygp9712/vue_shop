@@ -68,7 +68,7 @@
               <el-button type="danger" icon="el-icon-delete" size="mini" @click="deleteUser(scope.row.id)"></el-button>
             </el-tooltip>
             <el-tooltip effect="dark" content="分配角色" placement="top" :enterable="false">
-              <el-button type="warning" icon="el-icon-setting" size="mini"></el-button>
+              <el-button type="warning" icon="el-icon-setting" size="mini" @click="showSetDialog(scope.row)"></el-button>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -134,6 +134,33 @@
         <el-button type="primary" @click="editUser">确 定</el-button>
       </span>
     </el-dialog>
+    <!-- 分配角色对话框 -->
+    <el-dialog
+      title="分配用户角色"
+      :visible.sync="setDialogVisible"
+      width="60%" ref="setFormRef"
+      @close="handleSetDialogClose">
+      <!-- 主体区域 -->
+      <div>
+        <p>当前用户：{{userInfo.username}}</p>
+        <p>当前角色：{{userInfo.role_name}}</p>
+        <p>分配角色：
+          <el-select v-model="selectedRoleId" placeholder="请选择">
+            <el-option
+              v-for="item in rolelist"
+              :key="item.id"
+              :label="item.roleName"
+              :value="item.id">
+            </el-option>
+          </el-select>
+        </p>
+      </div>
+      <!-- 底部区域 -->
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="setDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="setUser">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 <script>
@@ -172,9 +199,15 @@ export default {
         pagesize: 2
       },
       userlist: [],
+      rolelist: [],
+      // 需要被分配角色的用户信息
+      userInfo: {},
+      // 当前选中的角色
+      selectedRoleId: '',
       total: 0,
       dialogVisible: false,
       editDialogVisible: false,
+      setDialogVisible: false,
       addForm: {
         username: '',
         password: '',
@@ -239,6 +272,16 @@ export default {
     }
   },
   methods: {
+    // 展示分配角色的对话框
+    async showSetDialog (userInfo) {
+      this.userInfo = userInfo
+      const { data: res } = await this.$http.get('roles')
+      if (res.meta.status !== 200) {
+        return this.$message.error('获取角色列表失败！')
+      }
+      this.rolelist = res.data
+      this.setDialogVisible = true
+    },
     // 展示用户编辑的对话框
     async showEditDialog (id) {
       const { data: res } = await this.$http.get('users/' + id)
@@ -250,13 +293,29 @@ export default {
       this.editForm = res.data
       this.editDialogVisible = true
     },
+    // 分配用户角色
+    async setUser () {
+      if (!this.selectedRoleId) {
+        return this.$message.warning('请选择需要分配的角色！')
+      }
+      console.log(this.selectedRoleId)
+      const { data: res } = await this.$http.put(`users/${this.userInfo.id}/role`, {
+        rid: this.selectedRoleId
+      })
+      if (res.meta.status !== 200) {
+        return this.$message.error('分配角色失败！')
+      }
+      this.$message.success('分配角色成功！')
+      this.getUserList()
+      this.setDialogVisible = false
+    },
     // 添加新用户
     addUser () {
       this.$refs.addFormRef.validate(async valid => {
         if (valid) {
           const { data: res } = await this.$http.post('users', this.addForm)
           if (res.meta.status !== 201) {
-            this.$message.error('添加用户失败')
+            return this.$message.error('添加用户失败')
           }
           this.$message.success('添加用户成功')
           this.dialogVisible = false
@@ -282,7 +341,7 @@ export default {
     // 删除用户
     async deleteUser (id) {
       console.log(id)
-      const confirmResult = await this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+      const confirmResult = await this.$confirm('此操作将永久删除该用户, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
@@ -306,6 +365,11 @@ export default {
     // 监听添加Dialog关闭事件
     handleDialogClose () {
       this.$refs.addFormRef.resetFields()
+    },
+    // 监听分配角色Dialog关闭事件
+    handleSetDialogClose () {
+      this.selectedRoleId = ''
+      this.userInfo = {}
     },
     // 状态改变开关
     async switchChange (userinfo) {
