@@ -14,6 +14,7 @@ import 'quill/dist/quill.snow.css' // for snow theme
 import 'quill/dist/quill.bubble.css' // for bubble theme
 
 import axios from 'axios'
+
 // 添加商品的上传图片也用到了URL
 axios.defaults.baseURL = 'http://localhost:8888/api/private/v1/'
 axios.interceptors.request.use(config => {
@@ -30,7 +31,6 @@ Vue.component('tree-table', TreeTable)
 
 // 引入富文本编辑器
 Vue.use(VueQuillEditor)
-
 Vue.config.productionTip = false
 
 Vue.filter('dateFormat', function (originVal) {
